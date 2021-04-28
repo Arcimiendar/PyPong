@@ -25,7 +25,7 @@ def main(pong_protocol: 'PongProtocol'):
 
     display_surface = pygame.display.set_mode((width, height), pygame.RESIZABLE)
     pygame.display.set_caption("PyPong")
-    sprites, this_board, enemy_board = get_sprites()
+    sprites, this_board, enemy_board, ball = get_sprites()
 
     running = True
     while running:
@@ -42,6 +42,8 @@ def main(pong_protocol: 'PongProtocol'):
                 enemy_board.move_to(event.remote_height)
             elif event.type == Event.QUIT:
                 running = False
+            elif event.type == Event.REMOTE_BALL_COORDS and not is_server:
+                ball.move_to(event.remote_width, event.remote_height)
 
         key_pressed = pygame.key.get_pressed()
         this_board.proceed(key_pressed)
@@ -49,6 +51,12 @@ def main(pong_protocol: 'PongProtocol'):
         event = this_board.get_event()
         if event:
             pong_protocol.sendLine(event.to_line())
+
+        event = ball.get_current_ball_coords_event()
+        pong_protocol.sendLine(event.to_line())
+
+        if is_server:
+            ball.proceed()
 
         display_surface.fill((0, 0, 0))
         for entity in sprites:

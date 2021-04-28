@@ -6,14 +6,26 @@ from constants import WIDTH, HEIGHT
 from pong_protocol.event import Event
 
 
-class Player(pygame.sprite.Sprite):
+class ScaledMixin:
+    def __init__(self):
+        self.window_height = HEIGHT
+        self.window_width = WIDTH
+
+        super(ScaledMixin, self).__init__()
+
+    def to_scaled_height(self, height):
+        return int(height * self.window_height / HEIGHT)
+
+    def to_scaled_width(self, width):
+        return int(width * self.window_width / WIDTH)
+
+
+class Player(ScaledMixin, pygame.sprite.Sprite):
     LEFT = 1
     RIGHT = 2
 
     def __init__(self, up_key, down_key, stick_to):
         super(Player, self).__init__()
-        self.window_height = HEIGHT
-        self.window_width = WIDTH
         self.up_key = up_key
         self.down_key = down_key
         self.stick_to = stick_to
@@ -49,12 +61,6 @@ class Player(pygame.sprite.Sprite):
         self.rect = self.surf.get_rect(center=center)
         self.rect.move_ip((self.to_scaled_width(self.orig_offset_x), self.to_scaled_height(self.orig_offset_y)))
 
-    def to_scaled_height(self, height):
-        return int(height * self.window_height / HEIGHT)
-
-    def to_scaled_width(self, width):
-        return int(width * self.window_width / WIDTH)
-
     def move_to(self, remote_height):
         difference = self.orig_offset_y - remote_height
         self.orig_offset_y = remote_height
@@ -76,15 +82,54 @@ class Player(pygame.sprite.Sprite):
             return Event(type='remote_height', remote_height=self.orig_offset_y)
 
 
-class Ball(pygame.sprite.Sprite):
-    def __init__(self):
-        pass
+class Ball(ScaledMixin, pygame.sprite.Sprite):
+    def __init__(self, left_board, right_board):
+        super(Ball, self).__init__()
+        self.left_board, self.right_board = left_board, right_board
 
+        self.orig_width = int(WIDTH * 0.01)
+        self.orig_height = int(WIDTH * 0.01)
+        self.surf = pygame.Surface((self.orig_width, self.orig_height))
+        self.surf.fill((255, 255, 255))
+
+        self.orig_offset_y = int(self.window_height / 2)
+        self.orig_offset_x = int(self.window_width / 2)
+
+        self.rect = self.surf.get_rect(center=(self.orig_offset_x, self.orig_offset_y))
+        # def scale(self):
+
+    def scale(self, window_width, window_height):
+        self.window_width, self.window_height = window_width, window_height
+
+        width = self.to_scaled_width(self.orig_width)
+        height = self.to_scaled_width(self.orig_height)
+
+        self.surf = pygame.transform.scale(self.surf, (width, height))
+        self.surf.fill((255, 255, 255))
+        self.rect = self.surf.get_rect(
+            center=(self.to_scaled_width(self.orig_offset_x), self.to_scaled_height(self.orig_offset_y))
+        )
+        # self.rect.move_ip((self.to_scaled_width(self.orig_offset_x), self.to_scaled_height(self.orig_offset_y)))
+
+    def get_current_ball_coords_event(self) -> Event:
+        return Event(type=Event.REMOTE_BALL_COORDS, remote_width=self.orig_offset_x, remote_height=self.orig_offset_y)
+
+    def move_to(self, remote_width, remote_height):
+        difference_y = self.orig_offset_y - remote_height
+        difference_x = self.orig_offset_x - remote_width
+        self.orig_offset_y = remote_height
+        self.orig_offset_x = remote_width
+        self.rect.move_ip((-self.to_scaled_width(difference_x), -self.to_scaled_height(difference_y)))
+
+    def proceed(self):
+        pass
 
 def get_sprites():
     player1 = Player(pygame.K_w, pygame.K_s, stick_to=Player.LEFT)
     player2 = Player(pygame.K_UP, pygame.K_DOWN, stick_to=Player.RIGHT)
+    ball = Ball(player1, player2)
     all_sprites = pygame.sprite.Group()
     all_sprites.add(player1)
     all_sprites.add(player2)
-    return all_sprites, player1, player2
+    all_sprites.add(ball)
+    return all_sprites, player1, player2, ball
