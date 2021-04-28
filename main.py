@@ -22,7 +22,7 @@ def main(pong_protocol: PongProtocol):
 
     display_surface = pygame.display.set_mode((width, height), pygame.RESIZABLE)
     pygame.display.set_caption("PyPong")
-    sprites, enemy_board = get_sprites()
+    sprites, this_board, enemy_board = get_sprites()
 
     running = True
     while running:
@@ -38,13 +38,15 @@ def main(pong_protocol: PongProtocol):
                 enemy_board.move_to(event.remote_height)
 
         key_pressed = pygame.key.get_pressed()
+        this_board.proceed(key_pressed)
 
         display_surface.fill((0, 0, 0))
         for entity in sprites:
-            entity.proceed(key_pressed)
+            # entity.proceed(key_pressed)
             display_surface.blit(entity.surf, entity.rect)
 
-        event = enemy_board.get_event()
+
+        event = this_board.get_event()
         if event:
             pong_protocol.sendLine(event.to_line())
 

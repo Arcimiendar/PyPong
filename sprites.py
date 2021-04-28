@@ -76,10 +76,15 @@ class Player(pygame.sprite.Sprite):
             return Event(type='remote_height', remote_height=self.orig_offset_y)
 
 
+class Ball(pygame.sprite.Sprite):
+    def __init__(self):
+        pass
+
+
 def get_sprites():
     player1 = Player(pygame.K_w, pygame.K_s, stick_to=Player.LEFT)
     player2 = Player(pygame.K_UP, pygame.K_DOWN, stick_to=Player.RIGHT)
     all_sprites = pygame.sprite.Group()
     all_sprites.add(player1)
     all_sprites.add(player2)
-    return all_sprites, player2
+    return all_sprites, player1, player2
