@@ -6,11 +6,12 @@ from sprites import get_sprites
 # ACC = 0.5
 # FRIC = -0.12
 
+# def game_logic()
 
 
 def main():
-    previous_height = height = HEIGHT
-    previous_width = width = WIDTH
+    height = HEIGHT
+    width = WIDTH
 
     pygame.init()
 
@@ -26,17 +27,16 @@ def main():
             if event.type == pygame.QUIT:
                 running = False
             elif event.type == pygame.VIDEORESIZE:
-                previous_width, width = width, event.w
-                previous_height, height = height, event.h
+                width = event.w
+                height = event.h
                 for entity in sprites:
                     entity.scale(width, height)
-                    pass
-                # screen.blit(pygame.transform.scale(pic, event.dict['size']), (0, 0))
-                # pygame.display.update()
+
+        key_pressed = pygame.key.get_pressed()
 
         display_surface.fill((0, 0, 0))
         for entity in sprites:
-            # pygame.transform.scale(entity.surf, (width, height), entity.surf)
+            entity.proceed(key_pressed)
             display_surface.blit(entity.surf, entity.rect)
 
         pygame.display.update()
