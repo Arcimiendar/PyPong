@@ -3,7 +3,7 @@ from typing import Tuple, Union
 import pygame.sprite
 
 from constants import WIDTH, HEIGHT
-from pong_protocol.protocol import Event
+from pong_protocol.event import Event
 
 
 class Player(pygame.sprite.Sprite):

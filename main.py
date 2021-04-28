@@ -1,18 +1,21 @@
 import pygame
+import sys
 
+from twisted.internet import reactor
+from typing import TYPE_CHECKING
 from itertools import chain
 from constants import WIDTH, HEIGHT, FPS
 from sprites import get_sprites
-from pong_protocol.protocol import PongProtocol
-
-already_here = False
+from pong_protocol.event import Event
 
 
-def main(pong_protocol: PongProtocol):
-    global already_here
-    if already_here:
-        return
-    already_here = True
+if TYPE_CHECKING:
+    from pong_protocol.protocol import PongProtocol
+
+
+def main(pong_protocol: 'PongProtocol'):
+
+    is_server = pong_protocol.is_server
     height = HEIGHT
     width = WIDTH
 
@@ -29,28 +32,30 @@ def main(pong_protocol: PongProtocol):
         for event in chain(pygame.event.get(), pong_protocol.get_available_events()):
             if event.type == pygame.QUIT:
                 running = False
+                pong_protocol.sendLine(Event(type=Event.QUIT).to_line())
             elif event.type == pygame.VIDEORESIZE:
                 width = event.w
                 height = event.h
                 for entity in sprites:
                     entity.scale(width, height)
-            elif event.type == 'remote_height':
+            elif event.type == Event.REMOTE_HEIGHT:
                 enemy_board.move_to(event.remote_height)
+            elif event.type == Event.QUIT:
+                running = False
 
         key_pressed = pygame.key.get_pressed()
         this_board.proceed(key_pressed)
-
-        display_surface.fill((0, 0, 0))
-        for entity in sprites:
-            # entity.proceed(key_pressed)
-            display_surface.blit(entity.surf, entity.rect)
-
 
         event = this_board.get_event()
         if event:
             pong_protocol.sendLine(event.to_line())
 
+        display_surface.fill((0, 0, 0))
+        for entity in sprites:
+            display_surface.blit(entity.surf, entity.rect)
+
         pygame.display.update()
         frame_per_sec.tick(FPS)
 
     pygame.quit()
+    reactor.callFromThread(reactor.stop)
