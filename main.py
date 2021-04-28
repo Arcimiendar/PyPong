@@ -21,7 +21,9 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-        # pygame.display.update()
+
+        display_surface.fill((0, 0, 0))
+        pygame.display.update()
         # frame_per_sec.tick(FPS)
 
     pygame.quit()
