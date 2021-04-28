@@ -3,6 +3,7 @@ from typing import Tuple, Union
 import pygame.sprite
 
 from constants import WIDTH, HEIGHT
+from pong_protocol.protocol import Event
 
 
 class Player(pygame.sprite.Sprite):
@@ -23,11 +24,10 @@ class Player(pygame.sprite.Sprite):
 
         center = self.get_center(stick_to)
 
+        self.event_available = False
         self.rect = self.surf.get_rect(center=center)
         self.orig_offset_x = 0
         self.orig_offset_y = 0
-        self.offset_x = 0
-        self.offset_y = 0
         self.orig_offset_step = int(HEIGHT * 0.02)
         self.offset_step = self.orig_offset_step
 
@@ -55,13 +55,25 @@ class Player(pygame.sprite.Sprite):
     def to_scaled_width(self, width):
         return int(width * self.window_width / WIDTH)
 
+    def move_to(self, remote_height):
+        difference = self.orig_offset_y - remote_height
+        self.orig_offset_y = remote_height
+        self.rect.move_ip((0, -self.to_scaled_height(difference)))
+
     def proceed(self, key_pressed):
         if key_pressed[self.up_key] and self.rect.centery - self.rect.height / 2 > 0:
+            self.event_available = True
             self.orig_offset_y -= self.orig_offset_step
             self.rect.move_ip((0, -self.to_scaled_height(self.orig_offset_step)))
         elif key_pressed[self.down_key] and self.rect.height / 2 + self.rect.centery < self.window_height:
+            self.event_available = True
             self.orig_offset_y += self.orig_offset_step
             self.rect.move_ip((0, self.to_scaled_height(self.orig_offset_step)))
+
+    def get_event(self):
+        if self.event_available:
+            self.event_available = False
+            return Event(type='remote_height', remote_height=self.orig_offset_y)
 
 
 def get_sprites():
@@ -70,4 +82,4 @@ def get_sprites():
     all_sprites = pygame.sprite.Group()
     all_sprites.add(player1)
     all_sprites.add(player2)
-    return all_sprites
+    return all_sprites, player2
