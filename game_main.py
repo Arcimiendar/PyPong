@@ -18,14 +18,17 @@ def main(pong_protocol: 'PongProtocol'):
     is_server = pong_protocol.is_server
     height = HEIGHT
     width = WIDTH
-
     pygame.init()
 
     frame_per_sec = pygame.time.Clock()
 
-    display_surface = pygame.display.set_mode((width, height), pygame.RESIZABLE)
+    display_surface = pygame.display.set_mode((width, height))
     pygame.display.set_caption("PyPong server" if is_server else 'PyPong client')
     sprites, this_board, enemy_board, ball = get_sprites()
+
+    score = ball.get_score()
+
+    font = pygame.font.Font("font.ttf", 64)
 
     running = True
     while running:
@@ -44,6 +47,8 @@ def main(pong_protocol: 'PongProtocol'):
                 running = False
             elif event.type == Event.REMOTE_BALL_COORDS and not is_server:
                 ball.move_to(WIDTH-event.remote_width, event.remote_height)
+            elif event.type == Event.SCORE_UPDATE:
+                score = event.score
 
         key_pressed = pygame.key.get_pressed()
         this_board.proceed(key_pressed)
@@ -54,8 +59,16 @@ def main(pong_protocol: 'PongProtocol'):
 
         if is_server:
             ball.proceed()
+            if ball.score_has_changed:
+                pong_protocol.sendLine(ball.get_score_event().to_line())
+                score = ball.get_score()
 
         display_surface.fill((0, 0, 0))
+
+        surf = font.render(score, True, (255, 0, 0), (0, 0, 0))
+        rect = surf.get_rect(center=(width / 2, height * 0.05))
+        display_surface.blit(surf, rect)
+
         for entity in sprites:
             display_surface.blit(entity.surf, entity.rect)
 
