@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from pong_protocol.protocol import PongProtocol
 
 
-def main(pong_protocol: 'PongProtocol'):
+def main(pong_protocol: 'PongProtocol', name=None):
 
     is_server = pong_protocol.is_server
     height = HEIGHT
@@ -24,7 +24,7 @@ def main(pong_protocol: 'PongProtocol'):
     frame_per_sec = pygame.time.Clock()
 
     display_surface = pygame.display.set_mode((width, height), pygame.RESIZABLE)
-    pygame.display.set_caption("PyPong")
+    pygame.display.set_caption("PyPong server" if is_server else 'PyPong client')
     sprites, this_board, enemy_board, ball = get_sprites()
 
     running = True
@@ -55,14 +55,14 @@ def main(pong_protocol: 'PongProtocol'):
         if is_server:
             ball.proceed()
 
-        event = ball.get_current_ball_coords_event()
-        pong_protocol.sendLine(event.to_line())
-
         display_surface.fill((0, 0, 0))
         for entity in sprites:
             display_surface.blit(entity.surf, entity.rect)
 
         pygame.display.update()
+        event = ball.get_current_ball_coords_event()
+        pong_protocol.sendLine(event.to_line())
+
         frame_per_sec.tick(FPS)
 
     pygame.quit()

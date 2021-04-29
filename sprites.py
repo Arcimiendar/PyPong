@@ -3,6 +3,7 @@ from typing import Tuple, Union
 
 import pygame.sprite
 import random
+import math
 
 from constants import WIDTH, HEIGHT
 from pong_protocol.event import Event
@@ -18,10 +19,10 @@ class ScaledMixin:
         super(ScaledMixin, self).__init__()
 
     def to_scaled_height(self, height):
-        return int(height * self.window_height / HEIGHT)
+        return height / HEIGHT * self.window_height
 
     def to_scaled_width(self, width):
-        return int(width * self.window_width / WIDTH)
+        return width / WIDTH * self.window_width
 
 
 class Player(ScaledMixin, pygame.sprite.Sprite):
@@ -47,11 +48,11 @@ class Player(ScaledMixin, pygame.sprite.Sprite):
         self.orig_offset_step = int(HEIGHT * 0.02)
         self.offset_step = self.orig_offset_step
 
-    def get_center(self, stick_to, width=WIDTH, height=HEIGHT) -> Tuple[Union[int, float], Union[int, float]]:
+    def get_center(self, stick_to) -> Tuple[Union[int, float], Union[int, float]]:
         if stick_to == self.LEFT:
-            return 0, height * 0.5
+            return self.to_scaled_width(0), self.to_scaled_height(HEIGHT * 0.5)
         elif stick_to == self.RIGHT:
-            return width, height * 0.5
+            return self.to_scaled_width(WIDTH), self.to_scaled_height(HEIGHT * 0.5)
 
     def scale(self, window_width, window_height):
         self.window_width, self.window_height = window_width, window_height
@@ -59,9 +60,9 @@ class Player(ScaledMixin, pygame.sprite.Sprite):
         width = self.to_scaled_width(self.orig_width)
         height = self.to_scaled_height(self.orig_height)
 
-        self.surf = pygame.transform.scale(self.surf, (width, height))
+        self.surf = pygame.transform.scale(self.surf, (int(width), int(height)))
         self.surf.fill((255, 255, 255))
-        center = self.get_center(stick_to=self.stick_to, width=window_width, height=window_height)
+        center = self.get_center(stick_to=self.stick_to)
         self.rect = self.surf.get_rect(center=center)
         self.rect.move_ip((self.to_scaled_width(self.orig_offset_x), self.to_scaled_height(self.orig_offset_y)))
 
@@ -96,7 +97,7 @@ class Ball(ScaledMixin, pygame.sprite.Sprite):
         self.surf = pygame.Surface((self.orig_width, self.orig_height))
         self.surf.fill((255, 255, 255))
 
-        self.orig_speed = int(HEIGHT * 0.01)
+        self.orig_speed = int(HEIGHT * 0.005)
         self.orig_offset_y = int(self.window_height / 2)
         self.orig_offset_x = int(self.window_width / 2)
         self.speed_vector = []
@@ -111,7 +112,7 @@ class Ball(ScaledMixin, pygame.sprite.Sprite):
         width = self.to_scaled_width(self.orig_width)
         height = self.to_scaled_width(self.orig_height)
 
-        self.surf = pygame.transform.scale(self.surf, (width, height))
+        self.surf = pygame.transform.scale(self.surf, (int(width), int(height)))
         self.surf.fill((255, 255, 255))
         self.rect = self.surf.get_rect(
             center=(self.to_scaled_width(self.orig_offset_x), self.to_scaled_height(self.orig_offset_y))
@@ -122,28 +123,39 @@ class Ball(ScaledMixin, pygame.sprite.Sprite):
         return Event(type=Event.REMOTE_BALL_COORDS, remote_width=self.orig_offset_x, remote_height=self.orig_offset_y)
 
     def move_to(self, remote_width, remote_height):
-        difference_y = self.orig_offset_y - remote_height
-        difference_x = self.orig_offset_x - remote_width
+        difference_y = remote_height - self.orig_offset_y
+        difference_x = remote_width - self.orig_offset_x
         self.orig_offset_y = remote_height
         self.orig_offset_x = remote_width
-        self.rect.move_ip((-self.to_scaled_width(difference_x), -self.to_scaled_height(difference_y)))
+        self.rect.move_ip((self.to_scaled_width(difference_x), self.to_scaled_height(difference_y)))
 
     def proceed(self):
         pos_x = self.orig_offset_x + self.speed_vector[0] * self.orig_speed
         pos_y = self.orig_offset_y + self.speed_vector[1] * self.orig_speed
-        if pos_y + self.orig_height / 2 > HEIGHT or pos_y - self.orig_height / 2 < 0:
+        if pos_y + self.orig_height / 2 >= HEIGHT:
             self.speed_vector[1] *= -1
+            diff = pos_y - HEIGHT + self.orig_height / 2
+            pos_y -= diff
 
-        elif pos_x + self.orig_width / 2 > WIDTH or pos_x - self.orig_width / 2 < 0:
+        if pos_y - self.orig_height / 2 <= 0:
+            self.speed_vector[1] *= -1
+            diff = pos_y - self.orig_height / 2
+            pos_y -= diff
+
+        if pos_x + self.orig_width / 2 >= WIDTH or pos_x - self.orig_width / 2 <= 0:
+            window_width, window_height = self.window_width, self.window_height
             self.__init__(self.left_board, self.right_board)
+            self.scale(window_width, window_height)
             return
 
-        elif pos_x + self.orig_width / 2 > WIDTH - self.right_board.orig_width / 2 and \
-                self.right_board.orig_offset_y - self.right_board.orig_height / 2 + HEIGHT / 2 < \
-                pos_y < self.right_board.orig_offset_y + self.right_board.orig_height / 2 + HEIGHT / 2 or \
-                pos_x - self.orig_width / 2 < self.left_board.orig_width / 2 and \
-                self.left_board.orig_offset_y - self.left_board.orig_height / 2 + HEIGHT / 2 < \
-                pos_y < self.left_board.orig_offset_y + self.left_board.orig_height / 2 + HEIGHT / 2:
+        if pos_x + math.floor(self.orig_width / 2) >= WIDTH - math.floor(self.right_board.orig_width / 2) and \
+                self.right_board.orig_offset_y + int((HEIGHT - self.right_board.orig_height + self.orig_height) / 2) < \
+                pos_y < \
+                self.right_board.orig_offset_y + int((HEIGHT + self.right_board.orig_height - self.orig_height)) / 2 \
+                or pos_x - math.ceil(self.orig_width / 2) <= math.ceil(self.left_board.orig_width / 2) and \
+                self.left_board.orig_offset_y + int((HEIGHT - self.left_board.orig_height + self.orig_height) / 2) < \
+                pos_y < \
+                self.left_board.orig_offset_y + int((HEIGHT + self.right_board.orig_height - self.orig_height) / 2):
 
             self.speed_vector[0] *= -1
 
