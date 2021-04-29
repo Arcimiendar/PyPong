@@ -95,7 +95,7 @@ class Ball(ScaledMixin, pygame.sprite.Sprite):
             self.left_board_score = 0
             self.right_board_score = 0
 
-        self.speed_up_iterations = 0
+        # self.speed_up_iterations = 0
         self.score_has_changed = True
         self.orig_width = int(WIDTH * 0.01)
         self.orig_height = int(WIDTH * 0.01)
@@ -135,11 +135,11 @@ class Ball(ScaledMixin, pygame.sprite.Sprite):
 
     def proceed(self):
 
-        self.speed_up_iterations += 1
-        if self.speed_up_iterations == 120:
-            self.speed_vector[0] *= 1.1
-            self.speed_vector[1] *= 1.1
-            self.speed_up_iterations = 0
+        # self.speed_up_iterations += 1
+        # if self.speed_up_iterations == 120:
+        #     self.speed_vector[0] *= 1.1
+        #     self.speed_vector[1] *= 1.1
+        #     self.speed_up_iterations = 0
 
         pos_x = int(self.orig_offset_x + self.speed_vector[0] * self.orig_speed)
         pos_y = int(self.orig_offset_y + self.speed_vector[1] * self.orig_speed)
@@ -167,15 +167,17 @@ class Ball(ScaledMixin, pygame.sprite.Sprite):
             self.scale(window_width, window_height)
             return
 
-        if pos_x + self.orig_width / 2 >= WIDTH - self.right_board.orig_width / 2 and \
-                self.right_board.orig_offset_y + (HEIGHT - self.right_board.orig_height + self.orig_height) / 2 < \
+        if pos_x >= WIDTH - self.right_board.orig_width / 2 and \
+                self.right_board.orig_offset_y + (HEIGHT - self.right_board.orig_height) / 2 < \
                 pos_y < \
-                self.right_board.orig_offset_y + (HEIGHT + self.right_board.orig_height - self.orig_height) / 2 \
-                or pos_x - self.orig_width / 2 <= self.left_board.orig_width / 2 and \
-                self.left_board.orig_offset_y + (HEIGHT - self.left_board.orig_height + self.orig_height) / 2 < \
+                self.right_board.orig_offset_y + (HEIGHT + self.right_board.orig_height) / 2 \
+                or pos_x <= self.left_board.orig_width / 2 and \
+                self.left_board.orig_offset_y + (HEIGHT - self.left_board.orig_height) / 2 < \
                 pos_y < \
-                self.left_board.orig_offset_y + (HEIGHT + self.right_board.orig_height - self.orig_height) / 2:
+                self.left_board.orig_offset_y + (HEIGHT + self.right_board.orig_height) / 2:
 
+            self.speed_vector[0] *= 1.1
+            self.speed_vector[1] *= 1.1
             self.speed_vector[0] *= -1
 
         self.move_to(pos_x, pos_y)
