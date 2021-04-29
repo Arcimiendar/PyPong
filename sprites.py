@@ -45,7 +45,7 @@ class Player(ScaledMixin, pygame.sprite.Sprite):
         self.rect = self.surf.get_rect(center=center)
         self.orig_offset_x = 0
         self.orig_offset_y = 0
-        self.orig_offset_step = int(HEIGHT * 0.02)
+        self.orig_offset_step = int(HEIGHT * 0.01)
         self.offset_step = self.orig_offset_step
 
     def get_center(self, stick_to) -> Tuple[Union[int, float], Union[int, float]]:
@@ -95,7 +95,7 @@ class Ball(ScaledMixin, pygame.sprite.Sprite):
             self.left_board_score = 0
             self.right_board_score = 0
 
-        # self.speed_up_iterations = 0
+        self.speed = 1.
         self.score_has_changed = True
         self.orig_width = int(WIDTH * 0.01)
         self.orig_height = int(WIDTH * 0.01)
@@ -134,15 +134,14 @@ class Ball(ScaledMixin, pygame.sprite.Sprite):
         self.rect.move_ip((self.to_scaled_width(difference_x), self.to_scaled_height(difference_y)))
 
     def proceed(self):
+        diff_x = self.speed * self.speed_vector[0] * self.orig_speed
+        diff_y = self.speed * self.speed_vector[1] * self.orig_speed
 
-        # self.speed_up_iterations += 1
-        # if self.speed_up_iterations == 120:
-        #     self.speed_vector[0] *= 1.1
-        #     self.speed_vector[1] *= 1.1
-        #     self.speed_up_iterations = 0
+        diff_y = math.floor(diff_y) if diff_y < 0 else math.ceil(diff_y)
+        diff_x = math.floor(diff_x) if diff_x < 0 else math.ceil(diff_x)
 
-        pos_x = int(self.orig_offset_x + self.speed_vector[0] * self.orig_speed)
-        pos_y = int(self.orig_offset_y + self.speed_vector[1] * self.orig_speed)
+        pos_x = self.orig_offset_x + diff_x
+        pos_y = self.orig_offset_y + diff_y
 
         if pos_y > HEIGHT:
             self.speed_vector[1] *= -1
@@ -154,7 +153,19 @@ class Ball(ScaledMixin, pygame.sprite.Sprite):
             diff = pos_y - self.orig_height / 2
             pos_y -= diff
 
-        if pos_x + self.orig_width / 2 >= WIDTH or pos_x - self.orig_width / 2 <= 0:
+        if pos_x >= WIDTH - self.right_board.orig_width / 2 and \
+                self.right_board.orig_offset_y + (HEIGHT - self.right_board.orig_height) / 2 < \
+                pos_y < \
+                self.right_board.orig_offset_y + (HEIGHT + self.right_board.orig_height) / 2 \
+                or pos_x <= self.left_board.orig_width / 2 and \
+                self.left_board.orig_offset_y + (HEIGHT - self.left_board.orig_height) / 2 < \
+                pos_y < \
+                self.left_board.orig_offset_y + (HEIGHT + self.right_board.orig_height) / 2:
+
+            self.speed_vector[0] *= -1
+            self.speed *= 1.1
+
+        elif pos_x + self.orig_width / 2 >= WIDTH or pos_x - self.orig_width / 2 <= 0:
             if pos_x + self.orig_width / 2 >= WIDTH:
                 self.left_board_score += 1
                 self.score_has_changed = True
@@ -166,19 +177,6 @@ class Ball(ScaledMixin, pygame.sprite.Sprite):
             self.__init__(self.left_board, self.right_board, keep_old_score=True)
             self.scale(window_width, window_height)
             return
-
-        if pos_x >= WIDTH - self.right_board.orig_width / 2 and \
-                self.right_board.orig_offset_y + (HEIGHT - self.right_board.orig_height) / 2 < \
-                pos_y < \
-                self.right_board.orig_offset_y + (HEIGHT + self.right_board.orig_height) / 2 \
-                or pos_x <= self.left_board.orig_width / 2 and \
-                self.left_board.orig_offset_y + (HEIGHT - self.left_board.orig_height) / 2 < \
-                pos_y < \
-                self.left_board.orig_offset_y + (HEIGHT + self.right_board.orig_height) / 2:
-
-            self.speed_vector[0] *= 1.1
-            self.speed_vector[1] *= 1.1
-            self.speed_vector[0] *= -1
 
         self.move_to(pos_x, pos_y)
 
