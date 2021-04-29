@@ -1,6 +1,6 @@
 import threading
 from typing import Tuple
-from main import main
+from game_main import main
 from pong_protocol.event import Event
 
 from twisted.internet.protocol import Factory, Protocol

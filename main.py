@@ -1,69 +1,62 @@
-import pygame
-import sys
+import tkinter as tk
+import tkinter.messagebox as tk_messagebox
+import re
 
-from twisted.internet import reactor
-from typing import TYPE_CHECKING
-from itertools import chain
-from constants import WIDTH, HEIGHT, FPS
-from sprites import get_sprites
-from pong_protocol.event import Event
+from pong_protocol.client import get_protocol_client
+from pong_protocol.server import get_protocol_server
 
-
-if TYPE_CHECKING:
-    from pong_protocol.protocol import PongProtocol
+IP_ADDRESS_PATTERN = r'^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'
 
 
-def main(pong_protocol: 'PongProtocol', name=None):
+class MainMenu(tk.Frame):
+    def __init__(self, master):
+        super(MainMenu, self).__init__(master)
+        self.master = master
+        self.ip_address_input_string = tk.StringVar(master)
+        self.ip_address = None
+        self.is_server = None
+        self.pack()
+        self.server_button = tk.Button(self, text='open server', command=self.open_server)
+        self.server_button.pack(side='top')
 
-    is_server = pong_protocol.is_server
-    height = HEIGHT
-    width = WIDTH
+        self.ip_input = tk.Entry(self, textvariable=self.ip_address_input_string)
+        self.ip_input.pack(side='bottom')
 
-    pygame.init()
+        self.client_button = tk.Button(self, text='join server', command=self.join_server)
+        self.client_button.pack(side='bottom')
 
-    frame_per_sec = pygame.time.Clock()
+    def stop_app(self):
+        self.destroy()
+        self.master.destroy()
 
-    display_surface = pygame.display.set_mode((width, height), pygame.RESIZABLE)
-    pygame.display.set_caption("PyPong server" if is_server else 'PyPong client')
-    sprites, this_board, enemy_board, ball = get_sprites()
+    def join_server(self):
+        self.is_server = False
+        self.ip_address = self.ip_address_input_string.get()
+        if re.match(IP_ADDRESS_PATTERN, self.ip_address) and \
+                all([int(num) < 256 for num in self.ip_address.split('.')]):
+            self.stop_app()
 
-    running = True
-    while running:
-        for event in chain(pygame.event.get(), pong_protocol.get_available_events()):
-            if event.type == pygame.QUIT:
-                running = False
-                pong_protocol.sendLine(Event(type=Event.QUIT).to_line())
-            elif event.type == pygame.VIDEORESIZE:
-                width = event.w
-                height = event.h
-                for entity in sprites:
-                    entity.scale(width, height)
-            elif event.type == Event.REMOTE_HEIGHT:
-                enemy_board.move_to(event.remote_height)
-            elif event.type == Event.QUIT:
-                running = False
-            elif event.type == Event.REMOTE_BALL_COORDS and not is_server:
-                ball.move_to(WIDTH-event.remote_width, event.remote_height)
+        else:
+            reply = tk_messagebox.askokcancel(self, message='ip address is wrong. Is it a DNS?')
+            if reply:
+                self.stop_app()
 
-        key_pressed = pygame.key.get_pressed()
-        this_board.proceed(key_pressed)
+    def open_server(self):
+        self.is_server = True
+        self.destroy()
+        self.master.destroy()
 
-        event = this_board.get_event()
-        if event:
-            pong_protocol.sendLine(event.to_line())
 
-        if is_server:
-            ball.proceed()
+def main():
+    root = tk.Tk()
+    app = MainMenu(master=root)
+    app.mainloop()
+    print(f'{app.is_server=} {app.ip_address=}')
 
-        display_surface.fill((0, 0, 0))
-        for entity in sprites:
-            display_surface.blit(entity.surf, entity.rect)
+    if app.is_server:
+        get_protocol_server()
+    else:
+        get_protocol_client(app.ip_address)
 
-        pygame.display.update()
-        event = ball.get_current_ball_coords_event()
-        pong_protocol.sendLine(event.to_line())
-
-        frame_per_sec.tick(FPS)
-
-    pygame.quit()
-    reactor.callFromThread(reactor.stop)
+if __name__ == '__main__':
+    main()
