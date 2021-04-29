@@ -11,6 +11,14 @@ from pong_protocol.event import Event
 random.seed(time.time())
 
 
+def happy_value(value):
+    return math.floor(value) if value < 0 else math.ceil(value)
+
+
+def sad_value(value):
+    return math.ceil(value) if value < 0 else math.floor(value)
+
+
 class ScaledMixin:
     def __init__(self, *args, **kwargs):
         self.window_height = HEIGHT
@@ -134,11 +142,8 @@ class Ball(ScaledMixin, pygame.sprite.Sprite):
         self.rect.move_ip((self.to_scaled_width(difference_x), self.to_scaled_height(difference_y)))
 
     def proceed(self):
-        diff_x = self.speed * self.speed_vector[0] * self.orig_speed
-        diff_y = self.speed * self.speed_vector[1] * self.orig_speed
-
-        diff_y = math.floor(diff_y) if diff_y < 0 else math.ceil(diff_y)
-        diff_x = math.floor(diff_x) if diff_x < 0 else math.ceil(diff_x)
+        diff_x = happy_value(self.speed * self.speed_vector[0] * self.orig_speed)
+        diff_y = happy_value(self.speed * self.speed_vector[1] * self.orig_speed)
 
         pos_x = self.orig_offset_x + diff_x
         pos_y = self.orig_offset_y + diff_y
