@@ -43,7 +43,7 @@ def main(pong_protocol: 'PongProtocol'):
             elif event.type == Event.QUIT:
                 running = False
             elif event.type == Event.REMOTE_BALL_COORDS and not is_server:
-                ball.move_to(event.remote_width, event.remote_height)
+                ball.move_to(WIDTH-event.remote_width, event.remote_height)
 
         key_pressed = pygame.key.get_pressed()
         this_board.proceed(key_pressed)
@@ -52,11 +52,11 @@ def main(pong_protocol: 'PongProtocol'):
         if event:
             pong_protocol.sendLine(event.to_line())
 
-        event = ball.get_current_ball_coords_event()
-        pong_protocol.sendLine(event.to_line())
-
         if is_server:
             ball.proceed()
+
+        event = ball.get_current_ball_coords_event()
+        pong_protocol.sendLine(event.to_line())
 
         display_surface.fill((0, 0, 0))
         for entity in sprites:

@@ -1,9 +1,13 @@
+import time
 from typing import Tuple, Union
 
 import pygame.sprite
+import random
 
 from constants import WIDTH, HEIGHT
 from pong_protocol.event import Event
+
+random.seed(time.time())
 
 
 class ScaledMixin:
@@ -83,7 +87,7 @@ class Player(ScaledMixin, pygame.sprite.Sprite):
 
 
 class Ball(ScaledMixin, pygame.sprite.Sprite):
-    def __init__(self, left_board, right_board):
+    def __init__(self, left_board: Player, right_board: Player):
         super(Ball, self).__init__()
         self.left_board, self.right_board = left_board, right_board
 
@@ -92,8 +96,11 @@ class Ball(ScaledMixin, pygame.sprite.Sprite):
         self.surf = pygame.Surface((self.orig_width, self.orig_height))
         self.surf.fill((255, 255, 255))
 
+        self.orig_speed = int(HEIGHT * 0.01)
         self.orig_offset_y = int(self.window_height / 2)
         self.orig_offset_x = int(self.window_width / 2)
+        self.speed_vector = []
+        self.speed_vector = [-1 if random.random() > 0.5 else 1, -1 if random.random() > 0.5 else 1]
 
         self.rect = self.surf.get_rect(center=(self.orig_offset_x, self.orig_offset_y))
         # def scale(self):
@@ -122,7 +129,26 @@ class Ball(ScaledMixin, pygame.sprite.Sprite):
         self.rect.move_ip((-self.to_scaled_width(difference_x), -self.to_scaled_height(difference_y)))
 
     def proceed(self):
-        pass
+        pos_x = self.orig_offset_x + self.speed_vector[0] * self.orig_speed
+        pos_y = self.orig_offset_y + self.speed_vector[1] * self.orig_speed
+        if pos_y + self.orig_height / 2 > HEIGHT or pos_y - self.orig_height / 2 < 0:
+            self.speed_vector[1] *= -1
+
+        elif pos_x + self.orig_width / 2 > WIDTH or pos_x - self.orig_width / 2 < 0:
+            self.__init__(self.left_board, self.right_board)
+            return
+
+        elif pos_x + self.orig_width / 2 > WIDTH - self.right_board.orig_width / 2 and \
+                self.right_board.orig_offset_y - self.right_board.orig_height / 2 + HEIGHT / 2 < \
+                pos_y < self.right_board.orig_offset_y + self.right_board.orig_height / 2 + HEIGHT / 2 or \
+                pos_x - self.orig_width / 2 < self.left_board.orig_width / 2 and \
+                self.left_board.orig_offset_y - self.left_board.orig_height / 2 + HEIGHT / 2 < \
+                pos_y < self.left_board.orig_offset_y + self.left_board.orig_height / 2 + HEIGHT / 2:
+
+            self.speed_vector[0] *= -1
+
+        self.move_to(pos_x, pos_y)
+
 
 def get_sprites():
     player1 = Player(pygame.K_w, pygame.K_s, stick_to=Player.LEFT)
